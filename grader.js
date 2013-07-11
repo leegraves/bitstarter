@@ -21,7 +21,9 @@ References:
    - https://developer.mozilla.org/en-US/docs/JSON#JSON_in_Firefox_2
 */
 
+var sys = require('util');
 var fs = require('fs');
+var rest = require('restler');
 var program = require('commander');
 var cheerio = require('cheerio');
 var HTMLFILE_DEFAULT = "index.html";
@@ -65,7 +67,17 @@ if(require.main == module) {
     program
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
+	.option('-u, --url <url_file>', 'URL to check', HTMLFILE_DEFAULT)
         .parse(process.argv);
+    rest.get(program.url).on('complete', function(result) {
+	if (result instanceof Error) {
+    	    sys.puts('Error: ' + result.message);
+            this.retry(5000); // try again after 5 sec
+  	} else {
+    	    fs.writeFileSync(HTMLFILE_DEFAULT, result);
+            //sys.puts(result);
+        }
+    });
     var checkJson = checkHtmlFile(program.file, program.checks);
     var outJson = JSON.stringify(checkJson, null, 4);
     console.log(outJson);
